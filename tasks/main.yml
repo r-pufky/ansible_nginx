@@ -1,0 +1,16 @@
+---
+- ansible.builtin.import_tasks: core.yml
+- ansible.builtin.import_tasks: install.yml
+- ansible.builtin.import_tasks: config.yml
+
+- name: 'stream | find hosts with stream configurations'
+  ansible.builtin.include_tasks: 'stream.yml'
+  vars:
+    nginx_stream_in:  '{{ hostvars[host].nginx_stream_in|default([]) }}'
+    nginx_stream_out: '{{ hostvars[host].nginx_stream_out|default([]) }}'
+  when: >
+    hostvars[host].nginx_stream_in is defined or
+    hostvars[host].nginx_stream_out is defined
+  loop: '{{ groups["all"] }}'
+  loop_control:
+    loop_var: host

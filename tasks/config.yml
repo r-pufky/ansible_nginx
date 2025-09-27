@@ -1,0 +1,152 @@
+---
+###############################################################################
+# NGINX secure files deployment
+###############################################################################
+# ALWAYS separate configuration/keys/auth data from serving data.
+#
+# Args:
+#   _nginx_confd_source: str standardized variable (trailing slash).
+#   _nginx_streamd_source: str standardized variable (trailing slash).
+#   _nginx_srv_source: str standardized variable (trailing slash).
+#   _nginx_ca_source: str standardized variable (trailing slash).
+#   _nginx_streamd: str standardized variable (trailing slash).
+#   _nginx_confd: str standardized variable (trailing slash).
+#   _nginx_auth: str standardized variable (trailing slash).
+#   _nginx_ca: str standardized variable (trailing slash).
+
+- name: 'config | create auth/ca directories'
+  ansible.builtin.file:
+    path:  '{{ item }}'
+    owner: 'root'
+    group: 'root'
+    mode:  0500
+    recurse: true
+    state: 'directory'
+  loop:
+    - '{{ _nginx_auth }}'
+    - '{{ _nginx_ca }}'
+
+- name: 'config | clear basic auth users'
+  ansible.builtin.file:
+    path:  '{{ _nginx_auth }}users'
+    state: 'absent'
+  failed_when: false
+  changed_when: false
+
+- name: 'config | set basic auth users'
+  community.general.htpasswd:
+    path:     '{{ _nginx_auth }}users'
+    name:     '{{ item.user }}'
+    password: '{{ item.pass }}'
+    crypt_scheme: 'md5_crypt'
+    owner: 'root'
+    group: 'root'
+    mode:  0400
+    state: 'present'
+  loop: '{{ nginx_basic_auth_users }}'
+  notify: 'reload nginx'
+  no_log: true # passwords
+
+- name: 'config | set CA directories'
+  ansible.builtin.file:
+    path:  '{{ _nginx_ca }}{{ item.path }}'
+    owner: 'root'
+    group: 'root'
+    mode:  0550
+  with_community.general.filetree: '{{ _nginx_ca_source }}'
+  when: item.state == 'directory' and nginx_ca_static
+
+- name: 'config | set CA chains'
+  ansible.builtin.template:
+    src:   '{{ item.src }}'
+    dest:  '{{ _nginx_ca }}{{ item.path }}'
+    owner: 'root'
+    group: 'root'
+    mode:  0440
+  with_community.general.filetree: '{{ _nginx_ca_source }}'
+  when: item.state == 'file' and nginx_ca_static
+  notify: 'reload nginx'
+
+- name: 'config | create proxy/web config directories'
+  ansible.builtin.file:
+    path:  '{{ _nginx_confd }}{{ item.path }}'
+    owner: 'root'
+    group: 'root'
+    mode:  0555
+    state: 'directory'
+  with_community.general.filetree: '{{ _nginx_confd_source }}'
+  when: item.state == 'directory'
+
+- name: 'config | set proxy/web configuration'
+  ansible.builtin.template:
+    src:   '{{ item.src }}'
+    dest:  '{{ _nginx_confd }}{{ item.path }}'
+    owner: 'root'
+    group: 'root'
+    mode:  0444
+  with_community.general.filetree: '{{ _nginx_confd_source }}'
+  when: item.state == 'file' and _nginx_confd_source|length > 0
+  notify: 'reload nginx'
+
+- name: 'config | set proxy/web configuration default.conf'
+  ansible.builtin.template:
+    src:   '{{ nginx_confd_default }}'
+    dest:  '{{ _nginx_confd }}default.conf'
+    owner: 'root'
+    group: 'root'
+    mode:  0444
+  when: nginx_confd_default|length > 0
+  notify: 'reload nginx'
+
+- name: 'config | create tcp/udp stream config directories'
+  ansible.builtin.file:
+    path:  '{{ _nginx_streamd }}{{ item.path }}'
+    owner: 'root'
+    group: 'root'
+    mode:  0555
+    state: 'directory'
+  with_community.general.filetree: '{{ _nginx_streamd_source }}'
+  when: item.state == 'directory' and nginx_streamd|length > 0
+
+- name: 'config | set tcp/udp stream configuration'
+  ansible.builtin.template:
+    src:   '{{ item.src }}'
+    dest:  '{{ _nginx_streamd }}{{ item.path }}'
+    owner: 'root'
+    group: 'root'
+    mode:  0444
+  with_community.general.filetree: '{{ _nginx_streamd_source }}'
+  when: item.state == 'file' and nginx_streamd|length > 0
+  notify: 'reload nginx'
+
+- name: 'config | set tcp/udp stream configuration default.conf'
+  ansible.builtin.template:
+    src:   '{{ nginx_streamd_default }}'
+    dest:  '{{ _nginx_streamd }}default.conf'
+    owner: 'root'
+    group: 'root'
+    mode:  0444
+  when: nginx_streamd_default|length > 0
+  notify: 'reload nginx'
+
+- name: 'config | set static serve files'
+  ansible.posix.synchronize:
+    src:       '{{ _nginx_srv_source }}'
+    dest:      '{{ nginx_srv }}'
+    delete:    true
+    recursive: true
+    archive:   false
+    checksum:  true
+  when: nginx_srv|length > 0
+  notify: 'reload nginx'
+
+- name: 'config | set static serve permissions'
+  ansible.builtin.shell: |
+    chown -R root:root '{{ item }}' &&
+    find '{{ item }}' -type d -exec chmod 0555 {} \; &&
+    find '{{ item }}' -type f -exec chmod 0444 {} \;
+  changed_when: false
+  loop:
+    - '{{ nginx_srv }}'
+  when: nginx_srv|length > 0
+  notify: 'reload nginx'

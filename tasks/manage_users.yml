@@ -1,0 +1,47 @@
+---
+###############################################################################
+# Manager NGINX Users
+###############################################################################
+# Check if user exists and create if enabled.
+#
+# Args:
+#   nginx_user: string nginx username.
+#   nginx_group: string nginx group.
+#   nginx_create_user: boolean true to create role default user.
+#   nginx_default_user: dict containing builitin.user options for nginx.
+#   nginx_default_group: dict containing builitin.group options for nginx.
+
+- name: 'manage users | confirm user exists'
+  ansible.builtin.command: 'id {{ nginx_user }}'
+  register: _nginx_user_exists
+  changed_when: _nginx_user_exists.rc > 0
+  failed_when: false
+
+- name: 'manage users | confirm group exists'
+  ansible.builtin.command: 'groups {{ nginx_group }}'
+  register: _nginx_group_exists
+  changed_when: _nginx_group_exists.rc > 0
+  failed_when: false
+
+- name: 'manage users | create nginx group'
+  ansible.builtin.group:
+    name:  '{{ nginx_default_group.name }}'
+    gid:   '{{ nginx_default_group.gid }}'
+    state: 'present'
+  when: nginx_create_user and _nginx_group_exists.rc != 0
+
+- name: 'manage users | create nginx user (logins disabled)'
+  ansible.builtin.user:
+    name:            '{{ nginx_default_user.name }}'
+    group:           '{{ nginx_default_user.group }}'
+    uid:             '{{ nginx_default_user.uid }}'
+    shell:           '{{ nginx_default_user.shell }}'
+    home:            '{{ nginx_default_user.home }}'
+    create_home:     '{{ nginx_default_user.create_home }}'
+    password:        '{{ nginx_default_user.password }}'
+    password_lock:   '{{ nginx_default_user.password_lock }}'
+    update_password: '{{ nginx_default_user.update_password }}'
+    expires:         '{{ nginx_default_user.expires }}'
+    system:          '{{ nginx_default_user.system }}'
+    state:           'present'
+  when: nginx_create_user and _nginx_user_exists.rc != 0

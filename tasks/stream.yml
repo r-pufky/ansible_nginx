@@ -1,0 +1,35 @@
+---
+###############################################################################
+# NGINX UFW settings for streaming
+###############################################################################
+# Streaming is port forwarding for NGINX and requires firewall to be setup for
+# each service that uses it. Iterate through services and apply based on
+# defined values.
+#
+# Args:
+#   nginx_stream_in: dict {ip:'', port: #, proto:'', comment:''} discovered
+#       from each existing host defined for inbound streaming traffic.
+#   nginx_stream_out: dict {ip:'', port: #, proto:'', comment:''} discovered
+#       from each existing host defined for outbound streaming traffic.
+
+- name: 'stream | UFW set inbound rules'
+  community.general.ufw:
+    direction: 'in'
+    from_ip:   '{{ item.ip }}'
+    to_port:   '{{ item.port|string }}'
+    proto:     '{{ item.proto }}'
+    comment:   '{{ item.comment }}'
+    rule:      'allow'
+  loop: '{{ nginx_stream_in }}'
+  when: nginx_stream_in|length > 0 and nginx_streamd|length > 0
+
+- name: 'stream | UFW set outbound rules'
+  community.general.ufw:
+    direction: 'out'
+    to_ip:     '{{ item.ip }}'
+    to_port:   '{{ item.port|string }}'
+    proto:     '{{ item.proto }}'
+    comment:   '{{ item.comment }}'
+    rule:      'allow'
+  loop: '{{ nginx_stream_out }}'
+  when: nginx_stream_out|length > 0 and nginx_streamd|length > 0
