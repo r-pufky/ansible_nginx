@@ -1,0 +1,41 @@
+---
+###############################################################################
+# Synchronize NGINX Files
+###############################################################################
+# Use synchronize for fast transfer of large number of files. Set permissions
+# after copied. Empty source will remove the destination directory.
+#
+# Args:
+#   source: dict - Data annotation containing file information.
+#   owner: str - Owner. Default: 'root'.
+#   group: str - Group. Default: 'root'.
+#   mode: str - Octal file permission. Default: '0644'.
+#   directory_mode: str - Octal directory permission. Default: '0755'.
+
+- name: 'Sync | {{ source.role_dest }}'
+  when: source.raw | length > 0
+  ansible.posix.synchronize:
+    src: '{{ source.role_src }}'
+    dest: '{{ source.role_dest }}'
+    delete: true
+    recursive: true
+    archive: false
+    checksum: true
+
+# yamllint disable rule:line-length
+- name: 'Sync | set permissions'
+  when: source.raw | length > 0
+  ansible.builtin.shell: >-
+    chown -R {{ owner | default('root') }}:{{ group | default('root') }} '{{ source.role_dest }}' &&
+    find '{{ source.role_dest }}' -type d -exec chmod {{ directory_mode | default('0755') }} {} \; &&
+    find '{{ source.role_dest }}' -type f -exec chmod {{ mode | default('0644') }} {} \;
+  args:
+    executable: '/bin/bash'
+  changed_when: false
+# yamllint enable rule:line-length
+
+- name: 'Sync | remove {{ _nginx_cfg_streamd_dir.role_dest }}'
+  when: source.raw | length == 0
+  ansible.builtin.file:
+    path: '{{ source.role_dest }}'
+    state: 'absent'

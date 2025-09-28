@@ -1,0 +1,16 @@
+---
+###############################################################################
+# NGINX CA (Certificate Authority) Configuration
+###############################################################################
+# Convenience wrapper to automatically manage custom CA certificates. Public
+# CA certificates are always installed.
+
+# Custom CA certificates.
+#
+# Sourced from ansible controller; automatically placed in /etc/nginx/ca with
+# correct permissions.
+#
+# nginx_cfg_ca_dir: 'host_vars/nginx.example.com/data/ca'
+#
+# Default: '' (disabled).
+nginx_cfg_ca_dir: ''

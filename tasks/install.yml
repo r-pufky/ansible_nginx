@@ -1,72 +1,28 @@
 ---
 ###############################################################################
-# NGINX Install
+# Install Packages
 ###############################################################################
-# NGINX reverse proxy / websever
-#
-# ALWAYS separate configuration/keys/auth data from serving data.
-#
-# Args:
-#   _nginx_packages: list of str packages to install.
+# Add external NGINX APT source and required dependencies.
 #
 # Reference:
 # * https://nginx.org/en/linux_packages.html#Debian
-# * https://github.com/nginxinc/docker-nginx/blob/master/stable/debian/Dockerfile
-# * https://nginx.org/en/download.html
-# * https://galaxy.ansible.com/nginxinc/nginx_core
-# * https://www.redhat.com/sysadmin/deploying-static-website-ansible
-# * https://www.nginx.com/resources/wiki/start/topics/tutorials/config_pitfalls/
 
-- ansible.builtin.include_tasks: manage_users.yml
-
-- name: 'install | install dependencies'
-  ansible.builtin.apt:
-    name:  '{{ nginx_default_packages }}'
-    state: 'latest'
-    update_cache: true
-
-- name: 'install | add repo key'
-  ansible.builtin.apt_key:
-    url:   'https://nginx.org/keys/nginx_signing.key'
-    id:    '573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62'
-    state: 'present'
-  when: not nginx_os_release
-
-- name: 'install | add repo'
-  ansible.builtin.apt_repository:
-    repo:     'deb http://nginx.org/packages/mainline/debian {{ ansible_distribution_release }} nginx'
-    filename: 'nginx'
-    update_cache: true
-    state:    'present'
-  when: not nginx_os_release
-
-- name: 'install | force apt preference NGINX offical > debian'
-  ansible.builtin.copy:
-    src:   'nginx'
-    dest:  '/etc/apt/preferences.d/nginx'
-    owner: 'root'
-    group: 'root'
-    mode:  0644
-  when: not nginx_os_release
-
-- name: 'install | install'
-  ansible.builtin.apt:
-    name:  'nginx'
-    update_cache: true
-    state: 'latest'
-
-- name: 'install | install modules'
-  ansible.builtin.apt:
-    name:  '{{ _nginx_packages }}'
-    update_cache: true
-    state: 'latest'
-  notify: 'restart nginx'
-
-- name: 'install | set core configuration'
-  ansible.builtin.template:
-    src:   'nginx.conf.j2'
-    dest:  '{{ nginx_root }}/nginx.conf'
-    owner: 'root'
-    group: 'root'
-    mode:  0644
-  notify: 'reload nginx'
+- name: 'Install | packages'
+  ansible.builtin.include_role:
+    name: 'r_pufky.deb.apt'
+  vars:
+    apt_packages:
+      - '{{ nginx_role_packages }}'
+      - '{{
+          _nginx_srv_packages.raw
+          if _nginx_srv_packages.raw | length > 0 else
+          []
+        }}'
+      - '{{
+          nginx_role_basic_auth_packages
+          if _nginx_cfg_basic_auth_enable.raw else
+          []
+        }}'
+    apt_pins: '{{ nginx_role_apt_pins }}'
+    apt_sources: '{{ nginx_role_apt_nginx }}'
+    apt_package_update_cache: true

@@ -1,0 +1,31 @@
+---
+###############################################################################
+# Validate
+###############################################################################
+# Start NGINX services and confirm they are active and running.
+
+- name: 'Validate | start services'
+  ansible.builtin.systemd:
+    name: '{{ item }}'
+    enabled: true
+    daemon_reload: true
+    state: '{{ "started" if _nginx_srv_restart_enable.raw else "reloaded" }}'
+  loop:
+    - 'nginx.service'
+
+- name: 'Validate | query service status'
+  ansible.builtin.service_facts:
+
+- name: 'Validate | assert services running'
+  ansible.builtin.assert:
+    quiet: true
+    that: ansible_facts.services[item].state == 'running'
+    fail_msg: |
+      ╭───────────────────────────────────────────────────────────────────╮
+      │                                                                   │
+      │                     Service failed to start.                      │
+      │                                                                   │
+      ├───────────────────────────────────────────────────────────────────╯
+      │ {{ item }}
+  loop:
+    - 'nginx.service'

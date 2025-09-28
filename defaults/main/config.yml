@@ -1,0 +1,106 @@
+---
+###############################################################################
+# NGINX Configuration
+###############################################################################
+# Manage all NGINX configuration from sourced files on ansible controller.
+#
+# Special Case:
+#   '': Empty source will remove the corresponding file/directory.
+
+# conf.d configuration.
+#
+# Sourced from ansible controller; automatically placed in /etc/nginx/conf.d
+# with correct permissions.
+#
+# nginx_cfg_confd_dir: 'host_vars/nginx.example.com/data/conf.d'
+#
+# Default: 'files/etc/conf.d' (Use package defaults in role).
+nginx_cfg_confd_dir: 'files/etc/conf.d'
+
+# Fast CGI parameters configuration.
+#
+# Sourced from ansible controller; automatically placed in
+# /etc/nginx/fastcgi_params with correct permissions.
+#
+# nginx_cfg_fastcgi_params_file:
+#   'host_vars/nginx.example.com/data/fastcgi_params'
+#
+# Default: 'files/etc/fastcgi_params' (Use package defaults in role).
+nginx_cfg_fastcgi_params_file: 'files/etc/fastcgi_params'
+
+# SCGI parameters configuration.
+#
+# Sourced from ansible controller; automatically placed in
+# /etc/nginx/scgi_params with correct permissions.
+#
+# nginx_cfg_scgi_params_file: 'host_vars/nginx.example.com/data/scgi_params'
+#
+# Default: 'files/etc/scgi_params' (Use package defaults in role).
+nginx_cfg_scgi_params_file: 'files/etc/scgi_params'
+
+# UWSGI parameters configuration.
+#
+# Sourced from ansible controller; automatically placed in
+# /etc/nginx/uwsgi_params with correct permissions.
+#
+# nginx_cfg_uwsgi_params_file: 'host_vars/nginx.example.com/data/uwsgi_params'
+#
+# Default: 'files/etc/uwsgi_params' (Use package defaults in role).
+nginx_cfg_uwsgi_params_file: 'files/etc/uwsgi_params'
+
+# MIME type configuration.
+#
+# Sourced from ansible controller; automatically placed in
+# /etc/nginx/mime.types with correct permissions.
+#
+# nginx_cfg_mime_types_file: 'host_vars/nginx.example.com/data/mime.types'
+#
+# Default: 'files/etc/mime.types' (Use package defaults in role).
+nginx_cfg_mime_types_file: 'files/etc/mime.types'
+
+# NGINX main configuration.
+#
+# Sourced from ansible controller; automatically placed in
+# /etc/nginx/nginx.conf with correct permissions.
+#
+# nginx_cfg_nginx_conf_file: 'host_vars/nginx.example.com/data/nginx.conf'
+#
+# Default: 'files/etc/nginx.conf' (Use package defaults in role).
+nginx_cfg_nginx_conf_file: 'files/etc/nginx.conf'
+
+# Web root configuration.
+#
+# Sourced from ansible controller; automatically placed in /usr/share/nginx/
+# with correct permissions.
+#
+# nginx_cfg_web_root_dir: 'host_vars/nginx.example.com/data/web_root'
+#
+# Default: 'files/web_root' (Use package defaults in role).
+nginx_cfg_web_root_dir: 'files/web_root'
+
+###############################################################################
+# NGINX stream.d Configuration
+###############################################################################
+# Streaming enables specific connections to be forwarded through the proxy,
+# bypassing proxy configuration (generally, this removes a layer of security).
+#
+# Only services EXPECTING incoming connections that cannot be proxied via HTTPS
+# should use this (deluge, plex, etc).
+#
+# Requires adding the following lines to nginx.conf:
+#
+#   stream {
+#     include stream.d/*.conf;
+#   }
+#
+# Add firewall rules allowing in/out bound traffic for streaming services.
+
+# stream.d configuration.
+#
+# Sourced from ansible controller; automatically placed in /etc/nginx/stream.d
+# with correct permissions.
+#
+# nginx_cfg_streamd_dir: 'host_vars/nginx.example.com/data/stream.d'
+#
+# Default: '' (disabled).
+nginx_cfg_streamd_dir: ''

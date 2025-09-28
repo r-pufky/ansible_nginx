@@ -1,21 +1,21 @@
 ---
 galaxy_info:
-  author:      'r_pufky'
+  role_name: 'nginx'
+  author: 'r_pufky'
   description: 'NGINX Server'
-  company:     'N/A'
-  license:     'AGPL-3.0 License'
-  min_ansible_version: 2.11
+  company: 'N/A'
+  license: 'AGPL-3.0 License'
+  min_ansible_version: '2.18.0'
 
   platforms:
     - name: 'Debian'
       versions:
-        - 'buster'
-        - 'bullseye'
+        - 'trixie'
 
   galaxy_tags:
     - 'nginx'
+    - 'webserver'
     - 'reverse'
     - 'proxy'
-    - 'webserver'
 
 dependencies: []

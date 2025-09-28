@@ -1,0 +1,45 @@
+---
+- name: 'Verify'
+  hosts: 'all'
+  gather_facts: false
+  tasks:
+    - name: 'Verify | set default files location'
+      ansible.builtin.set_fact:
+        _nginx_source:
+          '{{ lookup("env", "MOLECULE_PROJECT_DIRECTORY") ~ "/files" }}'
+
+    - name: 'Verify | /etc/nginx'
+      ansible.builtin.include_role:
+        name: 'r_pufky.lib.tests'
+        tasks_from: 'copy.yml'
+      vars:
+        test_name: 'Verify | {{ item }}'
+        test_src: '{{ _nginx_source ~ "/etc/" ~ item }}'
+        test_file: '/etc/nginx/{{ item }}'
+        test_owner: 'root'
+        test_group: 'root'
+        test_mode: '0644'
+        test_diff: true
+      loop:
+        - 'conf.d/default.conf'
+        - 'fastcgi_params'
+        - 'mime.types'
+        - 'nginx.conf'
+        - 'scgi_params'
+        - 'uwsgi_params'
+
+    - name: 'Verify | /usr/share/nginx'
+      ansible.builtin.include_role:
+        name: 'r_pufky.lib.tests'
+        tasks_from: 'copy.yml'
+      vars:
+        test_name: 'Verify | {{ item }}'
+        test_src: '{{ _nginx_source ~ "/web_root/" ~ item }}'
+        test_file: '/usr/share/nginx/{{ item }}'
+        test_owner: 'root'
+        test_group: 'root'
+        test_mode: '0644'
+        test_diff: true
+      loop:
+        - 'html/50x.html'
+        - 'html/index.html'

@@ -1,0 +1,80 @@
+---
+###############################################################################
+# Assert
+###############################################################################
+# Sanity check options to stop preventable errors.
+
+- name: 'Prep | assert nginx_cfg_fastcgi_params_file'
+  when: nginx_cfg_fastcgi_params_file | length > 0
+  ansible.builtin.assert:
+    quiet: true
+    that: not nginx_cfg_fastcgi_params_file.endswith('/')
+    fail_msg: |
+      ╭───────────────────────────────────────────────────────────────────╮
+      │                                                                   │
+      │        nginx_cfg_fastcgi_params_file: Must specify a file.        │
+      │                                                                   │
+      ├───────────────────────────────────────────────────────────────────╯
+      │ A file must be specified, not a directory.
+      │
+      │ nginx_cfg_fastcgi_params_file: {{ nginx_cfg_fastcgi_params_file }}
+
+- name: 'Prep | assert nginx_cfg_scgi_params_file'
+  when: nginx_cfg_scgi_params_file | length > 0
+  ansible.builtin.assert:
+    quiet: true
+    that: not nginx_cfg_scgi_params_file.endswith('/')
+    fail_msg: |
+      ╭───────────────────────────────────────────────────────────────────╮
+      │                                                                   │
+      │         nginx_cfg_scgi_params_file: Must specify a file.          │
+      │                                                                   │
+      ├───────────────────────────────────────────────────────────────────╯
+      │ A file must be specified, not a directory.
+      │
+      │ nginx_cfg_scgi_params_file: {{ nginx_cfg_scgi_params_file }}
+
+- name: 'Prep | assert nginx_cfg_uwsgi_params_file'
+  when: nginx_cfg_uwsgi_params_file | length > 0
+  ansible.builtin.assert:
+    quiet: true
+    that: not nginx_cfg_uwsgi_params_file.endswith('/')
+    fail_msg: |
+      ╭───────────────────────────────────────────────────────────────────╮
+      │                                                                   │
+      │         nginx_cfg_uwsgi_params_file: Must specify a file.         │
+      │                                                                   │
+      ├───────────────────────────────────────────────────────────────────╯
+      │ A file must be specified, not a directory.
+      │
+      │ nginx_cfg_uwsgi_params_file: {{ nginx_cfg_uwsgi_params_file }}
+
+- name: 'Prep | assert nginx_cfg_mime_types_file'
+  when: nginx_cfg_mime_types_file | length > 0
+  ansible.builtin.assert:
+    quiet: true
+    that: not nginx_cfg_mime_types_file.endswith('/')
+    fail_msg: |
+      ╭───────────────────────────────────────────────────────────────────╮
+      │                                                                   │
+      │          nginx_cfg_mime_types_file: Must specify a file.          │
+      │                                                                   │
+      ├───────────────────────────────────────────────────────────────────╯
+      │ A file must be specified, not a directory.
+      │
+      │ nginx_cfg_mime_types_file: {{ nginx_cfg_mime_types_file }}
+
+- name: 'Prep | assert nginx_cfg_nginx_conf_file'
+  when: nginx_cfg_nginx_conf_file | length > 0
+  ansible.builtin.assert:
+    quiet: true
+    that: not nginx_cfg_nginx_conf_file.endswith('/')
+    fail_msg: |
+      ╭───────────────────────────────────────────────────────────────────╮
+      │                                                                   │
+      │          nginx_cfg_nginx_conf_file: Must specify a file.          │
+      │                                                                   │
+      ├───────────────────────────────────────────────────────────────────╯
+      │ A file must be specified, not a directory.
+      │
+      │ nginx_cfg_nginx_conf_file: {{ nginx_cfg_nginx_conf_file }}

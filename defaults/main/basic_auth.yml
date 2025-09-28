@@ -1,0 +1,45 @@
+---
+###############################################################################
+# NGINX Basic Authentication Configuration
+###############################################################################
+# Convenience wrapper to automatically generate htpasswd file.
+
+# Enable management of basic auth?
+#
+# Automatically generate /etc/nginx/auth/users (htpasswd format).
+#
+# Default: False (disabled).
+nginx_cfg_basic_auth_enable: false
+
+# List of basic auth users.
+#
+# nginx_cfg_basic_auth_users:
+#     list of dict - User configuration.
+#   - user: str - Username.
+#     pass: str - Password.
+#     hash_scheme: str - Password hashing scheme. Optional.
+#           Any supported hash in passlib is valid. Only certain schemes are
+#           supported by NGINX.
+#         Values:
+#           apr_md5_crypt: Apache MD5 crypt variant.
+#           md5_crypt: MD5 crypt (insecure).
+#           des_crypt: DES crypt (insecure).
+#           ldap_sha1: LDAP SHA1 hash.
+#           plaintext: plaintext password (insecure).
+#         Default: 'apr_md5_crypt'.
+#         Reference:
+#         * https://passlib.readthedocs.io/en/stable/lib/passlib.apache.html
+#     state: str - User state. Optional.
+#         Values:
+#           present: Create or update user.
+#           absent: Remove user.
+#         Default: 'present'.
+#
+# nginx_cfg_basic_auth_users:
+#   - user: 'example'
+#     pass: 'test'
+#   - user: 'example2'
+#     state: 'absent'
+#
+# Default: [] (no users).
+nginx_cfg_basic_auth_users: []

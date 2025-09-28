@@ -1,0 +1,90 @@
+---
+###############################################################################
+# Deluge Role Options
+###############################################################################
+#
+# Updates:
+# * New MAJOR, MINOR releases should hard branch at Debian version before
+#   starting (e.g. 13.0.x branch).
+# * Package OS version is irrelevant (tied to Debian version).
+# * Validated package version tracked in role variable.
+# * Keep a separate change log as changes are made, you will not remember all
+#   of them.
+# * Use debian docs to validate package/process changes. Reference source docs
+#   if needed.
+# * Update role defaults (includes updating defaults, tasks):
+#   * Check default install for static files/ updates.
+# * Update tests for any changes.
+# * Standard role validation testing (yamllint, ansible-lint, todo, noqa).
+# * Tag with OS-APP-ROLE version.
+#
+# Reference:
+# * https://nginx.org/en/download.html
+
+# Last time NGINX options were validated against a default configuration.
+nginx_role_validate_date: '2025-09-27'
+nginx_role_validate_release: 'trixie'
+nginx_role_validate_version: '1.28.0'
+
+nginx_role_root: '/etc/nginx'
+nginx_role_web_root: '/usr/share/nginx'
+
+###############################################################################
+# APT Packages
+###############################################################################
+
+nginx_role_packages:
+  - 'nginx'
+  - 'ca-certificates'
+  - 'rsync'  # ansible.builtin.synchronize.
+
+nginx_role_basic_auth_packages:
+  - 'python3-passlib'  # community.general.htpasswd.
+
+nginx_role_apt_pins:
+  - name: 'nginx'
+    package: '*'
+    pin: 'origin nginx.org, release o=nginx'
+    pin_priority: 900
+    state: 'present'
+
+nginx_role_apt_nginx:
+  - name: 'nginx'
+    types:
+      - 'deb'
+    uris: 'http://nginx.org/packages/mainline/debian'
+    suites:
+      - 'trixie'
+    components:
+      - 'nginx'
+    signed_by: 'https://nginx.org/keys/nginx_signing.key'
+
+###############################################################################
+# Default NGINX User Group
+###############################################################################
+# Default group settings if an nginx user is force created.
+
+nginx_role_group:
+  name: 'nginx'
+  gid: 115
+
+###############################################################################
+# Default NGINX User Account
+###############################################################################
+# Default user settings if an nginx user is force created.
+#
+# Logins are disabled.
+
+nginx_role_user:
+  name: 'nginx'
+  group: 'nginx'
+  uid: 115
+  shell: '/usr/sbin/nologin'
+  home: '/nonexistent'
+  comment: 'nginx user,,,'
+  create_home: false
+  password: '!'
+  password_lock: true
+  update_password: 'always'
+  expires: -1
+  system: true
