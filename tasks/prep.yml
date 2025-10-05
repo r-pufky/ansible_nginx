@@ -25,11 +25,11 @@
   ansible.builtin.set_fact:
     _nginx_srv_user: '{{
         _nginx_srv_user |
-        combine({"role_uid": _nginx_srv_user_query.uid})
+        combine({"_uid": _nginx_srv_user_query.uid})
       }}'
     _nginx_srv_group: '{{
         _nginx_srv_group |
-        combine({"role_gid": _nginx_srv_user_query.group})
+        combine({"_gid": _nginx_srv_user_query.group})
       }}'
 
 - name: 'Prep | stop services'

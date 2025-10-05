@@ -24,10 +24,10 @@
       │                                                                   │
       ╰───────────────────────────────────────────────────────────────────╯
 
-- name: 'Config | set {{ _nginx_cfg_basic_auth_users.role_dest }}'
+- name: 'Config | set {{ _nginx_cfg_basic_auth_users._dest }}'
   when: _nginx_cfg_basic_auth_enable.raw
   community.general.htpasswd:
-    path: '{{ _nginx_cfg_basic_auth_users.role_dest }}'
+    path: '{{ _nginx_cfg_basic_auth_users._dest }}'
     name: '{{ item.user }}'
     password: '{{ item.pass }}'
     hash_scheme: '{{ item.hash_scheme }}'
@@ -39,13 +39,13 @@
   loop_control:
     label: '{{ item.user }}'
 
-- name: 'Config | remove {{ _nginx_cfg_basic_auth_users.role_dest }}'
+- name: 'Config | remove {{ _nginx_cfg_basic_auth_users._dest }}'
   when: not _nginx_cfg_basic_auth_enable.raw
   ansible.builtin.file:
-    path: '{{ _nginx_cfg_basic_auth_users.role_dest }}'
+    path: '{{ _nginx_cfg_basic_auth_users._dest }}'
     state: 'absent'
 
-- name: 'Config | sync {{ _nginx_cfg_ca_dir.role_dest }}'
+- name: 'Config | sync {{ _nginx_cfg_ca_dir._dest }}'
   when: _nginx_cfg_ca_dir.raw | length > 0
   ansible.builtin.include_tasks: 'sync.yml'
   vars:
@@ -55,7 +55,7 @@
     mode: '0400'
     directory_mode: '0500'
 
-- name: 'Config | sync {{ _nginx_cfg_confd_dir.role_dest }}'
+- name: 'Config | sync {{ _nginx_cfg_confd_dir._dest }}'
   when: _nginx_cfg_confd_dir.raw | length > 0
   ansible.builtin.include_tasks: 'sync.yml'
   vars:
@@ -65,7 +65,7 @@
     mode: '0644'
     directory_mode: '0755'
 
-- name: 'Config | sync {{ _nginx_cfg_fastcgi_params_file.role_dest }}'
+- name: 'Config | sync {{ _nginx_cfg_fastcgi_params_file._dest }}'
   when: _nginx_cfg_fastcgi_params_file.raw | length > 0
   ansible.builtin.include_tasks: 'sync.yml'
   vars:
@@ -75,7 +75,7 @@
     mode: '0644'
     directory_mode: '0755'
 
-- name: 'Config | sync {{ _nginx_cfg_scgi_params_file.role_dest }}'
+- name: 'Config | sync {{ _nginx_cfg_scgi_params_file._dest }}'
   when: _nginx_cfg_scgi_params_file.raw | length > 0
   ansible.builtin.include_tasks: 'sync.yml'
   vars:
@@ -85,7 +85,7 @@
     mode: '0644'
     directory_mode: '0755'
 
-- name: 'Config | sync {{ _nginx_cfg_uwsgi_params_file.role_dest }}'
+- name: 'Config | sync {{ _nginx_cfg_uwsgi_params_file._dest }}'
   when: _nginx_cfg_uwsgi_params_file.raw | length > 0
   ansible.builtin.include_tasks: 'sync.yml'
   vars:
@@ -95,7 +95,7 @@
     mode: '0644'
     directory_mode: '0755'
 
-- name: 'Config | sync {{ _nginx_cfg_mime_types_file.role_dest }}'
+- name: 'Config | sync {{ _nginx_cfg_mime_types_file._dest }}'
   when: _nginx_cfg_mime_types_file.raw | length > 0
   ansible.builtin.include_tasks: 'sync.yml'
   vars:
@@ -105,7 +105,7 @@
     mode: '0644'
     directory_mode: '0755'
 
-- name: 'Config | sync {{ _nginx_cfg_nginx_conf_file.role_dest }}'
+- name: 'Config | sync {{ _nginx_cfg_nginx_conf_file._dest }}'
   when: _nginx_cfg_nginx_conf_file.raw | length > 0
   ansible.builtin.include_tasks: 'sync.yml'
   vars:
@@ -115,7 +115,7 @@
     mode: '0644'
     directory_mode: '0755'
 
-- name: 'Config | sync {{ _nginx_cfg_web_root_dir.role_dest }}'
+- name: 'Config | sync {{ _nginx_cfg_web_root_dir._dest }}'
   when: _nginx_cfg_web_root_dir.raw | length > 0
   ansible.builtin.include_tasks: 'sync.yml'
   vars:
@@ -125,7 +125,7 @@
     mode: '0644'
     directory_mode: '0755'
 
-- name: 'Config | sync {{ _nginx_cfg_streamd_dir.role_dest }}'
+- name: 'Config | sync {{ _nginx_cfg_streamd_dir._dest }}'
   when: _nginx_cfg_streamd_dir.raw | length > 0
   ansible.builtin.include_tasks: 'sync.yml'
   vars:

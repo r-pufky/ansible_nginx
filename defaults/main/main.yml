@@ -4,6 +4,9 @@
 ###############################################################################
 # All NGINX modules are installed using the NGINX repository.
 #
+# Install size: ~4MB
+#   NGINX: ~4MB.
+#
 # Reference:
 # * https://nginx.org/en/linux_packages.html#Debian
 

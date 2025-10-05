@@ -12,11 +12,11 @@
 #   mode: str - Octal file permission. Default: '0644'.
 #   directory_mode: str - Octal directory permission. Default: '0755'.
 
-- name: 'Sync | {{ source.role_dest }}'
+- name: 'Sync | {{ source._dest }}'
   when: source.raw | length > 0
   ansible.posix.synchronize:
-    src: '{{ source.role_src }}'
-    dest: '{{ source.role_dest }}'
+    src: '{{ source._src }}'
+    dest: '{{ source._dest }}'
     delete: true
     recursive: true
     archive: false
@@ -26,16 +26,16 @@
 - name: 'Sync | set permissions'
   when: source.raw | length > 0
   ansible.builtin.shell: >-
-    chown -R {{ owner | default('root') }}:{{ group | default('root') }} '{{ source.role_dest }}' &&
-    find '{{ source.role_dest }}' -type d -exec chmod {{ directory_mode | default('0755') }} {} \; &&
-    find '{{ source.role_dest }}' -type f -exec chmod {{ mode | default('0644') }} {} \;
+    chown -R {{ owner | default('root') }}:{{ group | default('root') }} '{{ source._dest }}' &&
+    find '{{ source._dest }}' -type d -exec chmod {{ directory_mode | default('0755') }} {} \; &&
+    find '{{ source._dest }}' -type f -exec chmod {{ mode | default('0644') }} {} \;
   args:
     executable: '/bin/bash'
   changed_when: false
 # yamllint enable rule:line-length
 
-- name: 'Sync | remove {{ _nginx_cfg_streamd_dir.role_dest }}'
+- name: 'Sync | remove {{ _nginx_cfg_streamd_dir._dest }}'
   when: source.raw | length == 0
   ansible.builtin.file:
-    path: '{{ source.role_dest }}'
+    path: '{{ source._dest }}'
     state: 'absent'
