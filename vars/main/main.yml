@@ -15,7 +15,7 @@
 # * Update role defaults (includes updating defaults, tasks):
 #   * Check default install for static files/ updates.
 # * Update tests for any changes.
-# * Standard role validation testing (yamllint, ansible-lint, todo, noqa).
+# * Standard role validation testing (yamllint, ansible-lint, to-do, no-qa).
 # * Tag with OS-APP-ROLE version.
 #
 # Reference:
