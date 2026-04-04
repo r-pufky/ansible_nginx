@@ -1,42 +1,105 @@
 ---
 ###############################################################################
-# NGINX Prep
+#  Pre Execution Tasks
 ###############################################################################
-# Prepare system for install by creating user/group for service. Stopping
-# service if enabled.
+# Only use data annotations in role after merging role, defaults, runtime data.
+# Service may not exist if first install.
 
-- name: 'Prep | manage users'
-  when: _nginx_srv_create_user.raw
-  ansible.builtin.include_role:
-    name: 'r_pufky.deb.users'
-    tasks_from: 'role_account_add.yml'
-  vars:
-    users_role_user: '{{ nginx_role_user }}'
-    users_role_group: '{{ nginx_role_group }}'
+- name: 'Prep | fact | record start time'
+  ansible.builtin.set_fact:
+    nginx__srv: "{{ nginx___release | r_pufky.data.v3(
 
-- name: 'Prep | enumerate system user {{ _nginx_srv_user.raw }}'
+        _start=now(utc=True, fmt='%Y-%m-%dT%H%M%S'),
+        _packages=nginx_srv_packages,
+        _restart=nginx_srv_restart,
+        _user=nginx_srv_user,
+        _group=nginx_srv_group,
+        _default=nginx_srv_default,
+        _default_debug=nginx_srv_default_debug,
+
+      ) }}"
+    nginx__cfg: "{{ {} | r_pufky.data.v3(
+
+        _conf_d=nginx_cfg_conf_d | regex_replace('\\/$', ''),
+        _secure_conf_d=nginx_cfg_secure_conf_d | regex_replace('\\/$', ''),
+
+        _fastcgi_params=nginx_cfg_fastcgi_params,
+        _mime_types=nginx_cfg_mime_types,
+        _nginx_conf=nginx_cfg_nginx_conf,
+        _scgi_params=nginx_cfg_scgi_params,
+        _uwsgi_params=nginx_cfg_uwsgi_params,
+
+        _web_d=nginx_cfg_web_d | regex_replace('\\/$', ''),
+      ) }}"
+
+- name: 'Prep | assert | config enabled and source defined'
+  when: nginx_flg_config
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - nginx__cfg._conf_d | length > 0
+    fail_msg: |
+
+      ✘ Config source not set.
+      Config source enabled but no config source defined.
+
+      nginx_flg_config: {{ nginx_flg_config }}
+      nginx_cfg_conf_d: {{ nginx__cfg._conf_d }}
+
+- name: '{{ "Prep | account | query user " ~ nginx__srv._user }}'
+  ansible.builtin.command: '{{ "id " ~ nginx__srv._user }}'
+  failed_when: false
+  register: nginx__cfg_check
+  changed_when: nginx__cfg_check.rc > 0
+
+- name: '{{ "Prep | account | query group " ~ nginx__srv._group }}'
+  ansible.builtin.command: '{{ "groups " ~ nginx__srv._group }}'
+  failed_when: false
+  register: nginx__group_check
+  changed_when: nginx__group_check.rc > 0
+
+- name: '{{ "Prep | account | create group " ~ nginx__srv._group }}'
+  when: nginx__group_check.rc != 0
+  ansible.builtin.group:
+    gid: '{{ nginx___group.gid }}'
+    name: '{{ nginx___group.name }}'
+    state: 'present'
+
+- name: '{{ "Prep | account | create user " ~ nginx__srv._user }}'
+  when: nginx__cfg_check.rc != 0
   ansible.builtin.user:
-    name: '{{ _nginx_srv_user.raw }}'
+    name: '{{ nginx___user.name }}'
+    group: '{{ nginx___user.group }}'
+    uid: '{{ nginx___user.uid }}'
+    shell: '{{ nginx___user.shell }}'
+    home: '{{ nginx___user.home }}'
+    create_home: '{{ nginx___user.create_home }}'
+    password: '{{ nginx___user.password }}'
+    password_lock: '{{ nginx___user.password_lock }}'
+    update_password: '{{ nginx___user.update_password }}'
+    expires: '{{ nginx___user.expires }}'
+    system: '{{ nginx___user.system }}'
+
+# Pre-existing users may have a different UID/GID/Home.
+- name: '{{ "Prep | account | enumerate " ~ nginx__srv._user }}'
+  ansible.builtin.user:
+    name: '{{ nginx__srv._user }}'
   check_mode: true
   changed_when: false
-  register: _nginx_srv_user_query
+  register: nginx__cfg_query
 
-- name: 'Prep | parse system user UID/GID'
+- name: 'Prep | fact | parse service UID/GID'
   ansible.builtin.set_fact:
-    _nginx_srv_user: '{{
-        _nginx_srv_user |
-        combine({"_uid": _nginx_srv_user_query.uid})
-      }}'
-    _nginx_srv_group: '{{
-        _nginx_srv_group |
-        combine({"_gid": _nginx_srv_user_query.group})
-      }}'
+    nginx__cfg: "{{ nginx__cfg | r_pufky.data.v3(
 
-- name: 'Prep | stop services'
-  when: _nginx_srv_restart_enable.raw
+        _uid=nginx__cfg_query.uid,
+        _gid=nginx__cfg_query.group,
+        _home=nginx__cfg_query.home,
+      ) }}"
+
+- name: 'Prep | systemd | stop nginx.service'
+  when: nginx__srv._restart
   ansible.builtin.systemd:
-    name: '{{ item }}'
+    name: 'nginx.service'
     state: 'stopped'
   failed_when: false
-  loop:
-    - 'nginx.service'

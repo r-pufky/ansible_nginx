@@ -4,51 +4,39 @@
 ###############################################################################
 #
 # Updates:
-# * New MAJOR, MINOR releases should hard branch at Debian version before
-#   starting (e.g. 13.0.x branch).
-# * Package OS version is irrelevant (tied to Debian version).
-# * Validated package version tracked in role variable.
-# * Keep a separate change log as changes are made, you will not remember all
-#   of them.
-# * Use debian docs to validate package/process changes. Reference source docs
-#   if needed.
-# * Update role defaults (includes updating defaults, tasks):
-#   * Check default install for static files/ updates.
+# * KEEP a separate change log as changes are made.
+# * Use bare-metal docs to validate package/process changes.
+# * Update defaults.
 # * Update tests for any changes.
-# * Standard role validation testing (yamllint, ansible-lint, to-do, no-qa).
-# * Tag with OS-APP-ROLE version.
+# * Standard validation testing (yamllint, ansible-lint, to-do, no-qa).
 #
 # Reference:
 # * https://nginx.org/en/download.html
 
-# Last time NGINX options were validated against a default configuration.
-nginx_role_validate_date: '2025-09-27'
-nginx_role_validate_release: 'trixie'
-nginx_role_validate_version: '1.28.0'
+nginx___release: "{{ {} | r_pufky.data.v3(
 
-nginx_role_root: '/etc/nginx'
-nginx_role_web_root: '/usr/share/nginx'
+    _date='2026-04-03',
+    _debian='trixie',
+    _app='1.28.0',
+  ) }}"
+
 
 ###############################################################################
 # APT Packages
 ###############################################################################
 
-nginx_role_packages:
+nginx___packages:
   - 'nginx'
   - 'ca-certificates'
-  - 'rsync'  # ansible.builtin.synchronize.
 
-nginx_role_basic_auth_packages:
-  - 'python3-passlib'  # community.general.htpasswd.
-
-nginx_role_apt_pins:
+nginx___apt_pins:
   - name: 'nginx'
     package: '*'
     pin: 'origin nginx.org, release o=nginx'
     pin_priority: 900
     state: 'present'
 
-nginx_role_apt_nginx:
+nginx___apt_nginx:
   - name: 'nginx'
     types:
       - 'deb'
@@ -60,22 +48,37 @@ nginx_role_apt_nginx:
     signed_by: 'https://nginx.org/keys/nginx_signing.key'
 
 ###############################################################################
+# NGINX Options
+###############################################################################
+
+nginx___app: "{{ {} | r_pufky.data.v3(
+
+    _version=nginx___release._app,
+    _etc_d='/etc/nginx',
+    _conf_d='/etc/nginx/conf.d',
+    _secure_conf_d='/etc/nginx/secure.conf.d',
+
+    _fastcgi_params='/etc/nginx/fastcgi_params',
+    _mime_types='/etc/nginx/mime.types',
+    _nginx_conf='/etc/nginx/nginx.conf',
+    _scgi_params='/etc/nginx/scgi_params',
+    _uwsgi_params='/etc/nginx/uwsgi_params',
+
+    _web_d='/usr/share/nginx',
+
+    _default='/etc/default/nginx',
+    _default_debug='/etc/default/nginx-debug',
+  ) }}"
+
+###############################################################################
 # Default NGINX User Group
 ###############################################################################
-# Default group settings if an nginx user is force created.
 
-nginx_role_group:
+nginx___group:
   name: 'nginx'
   gid: 115
 
-###############################################################################
-# Default NGINX User Account
-###############################################################################
-# Default user settings if an nginx user is force created.
-#
-# Logins are disabled.
-
-nginx_role_user:
+nginx___user:
   name: 'nginx'
   group: 'nginx'
   uid: 115

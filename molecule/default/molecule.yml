@@ -4,10 +4,9 @@
 ###############################################################################
 # Default values results in running service.
 #
-#
 # Tests:
-# * NGINX service active and running.
-# * Default files are copied correctly.
+# * NGINX service active and running (default).
+# * NGINX service active and running (explicit configuration).
 
 dependency:
   name: 'galaxy'
@@ -21,17 +20,8 @@ provisioner:
       callback_whitelist: 'profile_tasks, timer, yaml'
     ssh_connection:
       pipelining: false
-  inventory:
-    group_vars:
-      all:
-        nginx_cfg_basic_auth_enable: true
-        nginx_cfg_basic_auth_users:
-          - user: 'test'
-            pass: 'test'
-          - user: 'test2'
-            state: 'absent'
 platforms:
-  - name: 'nginx-debian-13-default'
+  - name: 'nginx-default'
     image: 'ghcr.io/hifis-net/debian-systemd:13'
     systemd: 'always'
     volumes:
@@ -43,21 +33,12 @@ platforms:
       - '8443:443/tcp'
 verifier:
   name: 'ansible'
-lint: |
-  set -e
-  yamllint .
-  ansible-lint .
 scenario:
   test_sequence:
-    # - 'dependency'
-    # - 'cleanup'
     - 'destroy'
     - 'syntax'
     - 'create'
-    # - 'prepare'
+    - 'prepare'
     - 'converge'
-    # - 'idempotence'  # services always restarted.
-    # - 'side_effect'
     - 'verify'
-    # - 'cleanup'
     - 'destroy'

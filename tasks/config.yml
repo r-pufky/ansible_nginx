@@ -2,135 +2,222 @@
 ###############################################################################
 # Configure Services
 ###############################################################################
-# Create custom service directories and copy configuration files from ansible
-# controller.
 
-- name: 'Config | create service directories'
-  ansible.builtin.file:
-    path: '{{ nginx_role_root ~ "/" ~ item }}'
-    owner: 'root'
-    group: 'root'
-    mode: '0500'
-    state: 'directory'
-  loop:
-    - 'auth'
-
-- name: 'Config | synchronizing files 🗘'
-  ansible.builtin.debug:
-    msg: |
-      ╭───────────────────────────────────────────────────────────────────╮
-      │                                                                   │
-      │         Synchronizing files. This may take a few minutes.         │
-      │                                                                   │
-      ╰───────────────────────────────────────────────────────────────────╯
-
-- name: 'Config | set {{ _nginx_cfg_basic_auth_users._dest }}'
-  when: _nginx_cfg_basic_auth_enable.raw
-  community.general.htpasswd:
-    path: '{{ _nginx_cfg_basic_auth_users._dest }}'
-    name: '{{ item.user }}'
-    password: '{{ item.pass }}'
-    hash_scheme: '{{ item.hash_scheme }}'
-    owner: 'root'
-    group: 'root'
-    mode: '0400'
-    state: '{{ item.state }}'
-  loop: '{{ _nginx_cfg_basic_auth_users.data }}'
-  loop_control:
-    label: '{{ item.user }}'
-
-- name: 'Config | remove {{ _nginx_cfg_basic_auth_users._dest }}'
-  when: not _nginx_cfg_basic_auth_enable.raw
-  ansible.builtin.file:
-    path: '{{ _nginx_cfg_basic_auth_users._dest }}'
-    state: 'absent'
-
-- name: 'Config | sync {{ _nginx_cfg_ca_dir._dest }}'
-  when: _nginx_cfg_ca_dir.raw | length > 0
-  ansible.builtin.include_tasks: 'sync.yml'
-  vars:
-    source: '{{ _nginx_cfg_ca_dir }}'
-    owner: 'root'
-    group: 'root'
-    mode: '0400'
-    directory_mode: '0500'
-
-- name: 'Config | sync {{ _nginx_cfg_confd_dir._dest }}'
-  when: _nginx_cfg_confd_dir.raw | length > 0
-  ansible.builtin.include_tasks: 'sync.yml'
-  vars:
-    source: '{{ _nginx_cfg_confd_dir }}'
+- name: '{{ "Install | filesystem | set " ~ nginx___app._default }}'
+  when: nginx__srv._default | length > 0
+  ansible.builtin.template:
+    src: '{{ nginx__srv._default }}'
+    dest: '{{ nginx___app._default }}'
     owner: 'root'
     group: 'root'
     mode: '0644'
-    directory_mode: '0755'
 
-- name: 'Config | sync {{ _nginx_cfg_fastcgi_params_file._dest }}'
-  when: _nginx_cfg_fastcgi_params_file.raw | length > 0
-  ansible.builtin.include_tasks: 'sync.yml'
-  vars:
-    source: '{{ _nginx_cfg_fastcgi_params_file }}'
+- name: '{{ "Install | filesystem | set " ~ nginx___app._default_debug }}'
+  when: nginx__srv._default_debug | length > 0
+  ansible.builtin.template:
+    src: '{{ nginx__srv._default_debug }}'
+    dest: '{{ nginx___app._default_debug }}'
     owner: 'root'
     group: 'root'
     mode: '0644'
-    directory_mode: '0755'
 
-- name: 'Config | sync {{ _nginx_cfg_scgi_params_file._dest }}'
-  when: _nginx_cfg_scgi_params_file.raw | length > 0
-  ansible.builtin.include_tasks: 'sync.yml'
-  vars:
-    source: '{{ _nginx_cfg_scgi_params_file }}'
+- name: '{{ "Config | filesystem | set " ~ nginx___app._conf_d }}'
+  when: nginx__cfg._conf_d | length > 0
+  block:
+    - name: 'Config | filetree | set managed directories'
+      ansible.builtin.file:
+        path: '{{ nginx___app._conf_d ~ "/" ~ item.path }}'
+        owner: 'root'
+        group: 'root'
+        mode: '0755'
+        state: 'directory'
+      loop:
+        '{{ query("community.general.filetree", nginx__cfg._conf_d) }}'
+      loop_control:
+        label: '{{ item.path }}'
+      when: item.state == 'directory'
+
+    - name: 'Config | filetree | set managed files'
+      ansible.builtin.template:
+        src: '{{ item.src }}'
+        dest: '{{ nginx___app._conf_d ~ "/" ~ item.path }}'
+        owner: 'root'
+        group: 'root'
+        mode: '0644'
+      loop:
+        '{{ query("community.general.filetree", nginx__cfg._conf_d) }}'
+      loop_control:
+        label: '{{ item.path }}'
+      when: item.state == 'file'
+
+    - name: 'Config | filesystem | query remote files'
+      ansible.builtin.find:
+        paths: '{{ nginx___app._conf_d }}'
+        file_type: 'any'
+        hidden: true
+        recurse: true
+      register: nginx__remote
+
+    - name: 'Config | filetree | remove unmanaged files and directories'
+      ansible.builtin.file:
+        path: '{{ item.path }}'
+        state: 'absent'
+      loop: '{{ nginx__remote.files | sort(attribute="path", reverse=true) }}'
+      loop_control:
+        label: '{{ item.path }}'
+      when: >
+        item.path not in
+        (
+          query("community.general.filetree", nginx__cfg._conf_d) |
+          map(attribute='path') |
+          map('regex_replace', '^', nginx___app._conf_d ~ "/") | list
+        )
+
+- name: '{{ "Config | filesystem | set " ~ nginx___app._secure_conf_d }}'
+  when: nginx__cfg._secure_conf_d | length > 0
+  block:
+    - name: 'Config | filetree | set managed directories'
+      ansible.builtin.file:
+        path: '{{ nginx___app._secure_conf_d ~ "/" ~ item.path }}'
+        owner: 'root'
+        group: 'root'
+        mode: '0750'
+        state: 'directory'
+      loop:
+        '{{ query("community.general.filetree", nginx__cfg._secure_conf_d) }}'
+      loop_control:
+        label: '{{ item.path }}'
+      when: item.state == 'directory'
+
+    - name: 'Config | filetree | set managed files'
+      ansible.builtin.template:
+        src: '{{ item.src }}'
+        dest: '{{ nginx___app._secure_conf_d ~ "/" ~ item.path }}'
+        owner: 'root'
+        group: 'root'
+        mode: '0640'
+      loop:
+        '{{ query("community.general.filetree", nginx__cfg._secure_conf_d) }}'
+      loop_control:
+        label: '{{ item.path }}'
+      when: item.state == 'file'
+
+    - name: 'Config | filesystem | query remote files'
+      ansible.builtin.find:
+        paths: '{{ nginx___app._secure_conf_d }}'
+        file_type: 'any'
+        hidden: true
+        recurse: true
+      register: nginx__remote
+
+    - name: 'Config | filetree | remove unmanaged files and directories'
+      ansible.builtin.file:
+        path: '{{ item.path }}'
+        state: 'absent'
+      loop: '{{ nginx__remote.files | sort(attribute="path", reverse=true) }}'
+      loop_control:
+        label: '{{ item.path }}'
+      when: >
+        item.path not in
+        (
+          query("community.general.filetree", nginx__cfg._secure_conf_d) |
+          map(attribute='path') |
+          map('regex_replace', '^', nginx___app._secure_conf_d ~ "/") | list
+        )
+
+- name: '{{ "Config | filesystem | set " ~ nginx___app._fastcgi_params }}'
+  when: nginx__cfg._fastcgi_params | length > 0
+  ansible.builtin.template:
+    src: '{{ nginx__cfg._fastcgi_params }}'
+    dest: '{{ nginx___app._fastcgi_params }}'
     owner: 'root'
     group: 'root'
     mode: '0644'
-    directory_mode: '0755'
 
-- name: 'Config | sync {{ _nginx_cfg_uwsgi_params_file._dest }}'
-  when: _nginx_cfg_uwsgi_params_file.raw | length > 0
-  ansible.builtin.include_tasks: 'sync.yml'
-  vars:
-    source: '{{ _nginx_cfg_uwsgi_params_file }}'
+- name: '{{ "Config | filesystem | set " ~ nginx___app._mime_types }}'
+  when: nginx__cfg._mime_types | length > 0
+  ansible.builtin.template:
+    src: '{{ nginx__cfg._mime_types }}'
+    dest: '{{ nginx___app._mime_types }}'
     owner: 'root'
     group: 'root'
     mode: '0644'
-    directory_mode: '0755'
 
-- name: 'Config | sync {{ _nginx_cfg_mime_types_file._dest }}'
-  when: _nginx_cfg_mime_types_file.raw | length > 0
-  ansible.builtin.include_tasks: 'sync.yml'
-  vars:
-    source: '{{ _nginx_cfg_mime_types_file }}'
+- name: '{{ "Config | filesystem | set " ~ nginx___app._nginx_conf }}'
+  when: nginx__cfg._nginx_conf | length > 0
+  ansible.builtin.template:
+    src: '{{ nginx__cfg._nginx_conf }}'
+    dest: '{{ nginx___app._nginx_conf }}'
     owner: 'root'
     group: 'root'
     mode: '0644'
-    directory_mode: '0755'
 
-- name: 'Config | sync {{ _nginx_cfg_nginx_conf_file._dest }}'
-  when: _nginx_cfg_nginx_conf_file.raw | length > 0
-  ansible.builtin.include_tasks: 'sync.yml'
-  vars:
-    source: '{{ _nginx_cfg_nginx_conf_file }}'
+- name: '{{ "Config | filesystem | set " ~ nginx___app._scgi_params }}'
+  when: nginx__cfg._scgi_params | length > 0
+  ansible.builtin.template:
+    src: '{{ nginx__cfg._scgi_params }}'
+    dest: '{{ nginx___app._scgi_params }}'
     owner: 'root'
     group: 'root'
     mode: '0644'
-    directory_mode: '0755'
 
-- name: 'Config | sync {{ _nginx_cfg_web_root_dir._dest }}'
-  when: _nginx_cfg_web_root_dir.raw | length > 0
-  ansible.builtin.include_tasks: 'sync.yml'
-  vars:
-    source: '{{ _nginx_cfg_web_root_dir }}'
+- name: '{{ "Config | filesystem | set " ~ nginx___app._uwsgi_params }}'
+  when: nginx__cfg._uwsgi_params | length > 0
+  ansible.builtin.template:
+    src: '{{ nginx__cfg._uwsgi_params }}'
+    dest: '{{ nginx___app._uwsgi_params }}'
     owner: 'root'
     group: 'root'
     mode: '0644'
-    directory_mode: '0755'
 
-- name: 'Config | sync {{ _nginx_cfg_streamd_dir._dest }}'
-  when: _nginx_cfg_streamd_dir.raw | length > 0
-  ansible.builtin.include_tasks: 'sync.yml'
-  vars:
-    source: '{{ _nginx_cfg_streamd_dir }}'
-    owner: 'root'
-    group: 'root'
-    mode: '0644'
-    directory_mode: '0755'
+- name: '{{ "Config | filesystem | set " ~ nginx___app._web_d }}'
+  when: nginx__cfg._web_d | length > 0
+  block:
+    - name: 'Config | filetree | set managed directories'
+      ansible.builtin.file:
+        path: '{{ nginx___app._web_d ~ "/" ~ item.path }}'
+        owner: 'root'
+        group: 'root'
+        mode: '0755'
+        state: 'directory'
+      loop:
+        '{{ query("community.general.filetree", nginx__cfg._web_d) }}'
+      loop_control:
+        label: '{{ item.path }}'
+      when: item.state == 'directory'
+
+    - name: 'Config | filetree | set managed files'
+      ansible.builtin.template:
+        src: '{{ item.src }}'
+        dest: '{{ nginx___app._web_d ~ "/" ~ item.path }}'
+        owner: 'root'
+        group: 'root'
+        mode: '0644'
+      loop:
+        '{{ query("community.general.filetree", nginx__cfg._web_d) }}'
+      loop_control:
+        label: '{{ item.path }}'
+      when: item.state == 'file'
+
+    - name: 'Config | filesystem | query remote files'
+      ansible.builtin.find:
+        paths: '{{ nginx___app._web_d }}'
+        file_type: 'any'
+        hidden: true
+        recurse: true
+      register: nginx__remote
+
+    - name: 'Config | filetree | remove unmanaged files and directories'
+      ansible.builtin.file:
+        path: '{{ item.path }}'
+        state: 'absent'
+      loop: '{{ nginx__remote.files | sort(attribute="path", reverse=true) }}'
+      loop_control:
+        label: '{{ item.path }}'
+      when: >
+        item.path not in
+        (
+          query("community.general.filetree", nginx__cfg._web_d) |
+          map(attribute='path') |
+          map('regex_replace', '^', nginx___app._web_d ~ "/") | list
+        )

@@ -3,6 +3,35 @@
   hosts: 'all'
   gather_facts: false
   tasks:
-    - name: 'Converge | apply r_pufky.srv.nginx'
+    - name: 'Converge | fact | set cache location'
+      ansible.builtin.set_fact:
+        nginx__test_cache: '{{
+            lookup("env", "MOLECULE_PROJECT_DIRECTORY") ~ "/templates/default/"
+          }}'
+
+    - name: 'Converge | roles | r_pufky.srv.nginx'
       ansible.builtin.include_role:
         name: 'r_pufky.srv.nginx'
+
+    - name: 'Converge | roles | r_pufky.srv.nginx (config)'
+      ansible.builtin.include_role:
+        name: 'r_pufky.srv.nginx'
+      vars:
+        nginx_flg_config: true
+        nginx_srv_default: '{{ nginx__test_cache ~ "etc/default/nginx" }}'
+        nginx_srv_default_debug:
+          '{{ nginx__test_cache ~ "etc/default/nginx-debug" }}'
+        nginx_cfg_conf_d: '{{ nginx__test_cache ~ "etc/nginx/conf.d" }}'
+        nginx_cfg_secure_conf_d:
+          '{{ nginx__test_cache ~ "etc/nginx/secure.conf.d" }}'
+        nginx_cfg_fastcgi_params:
+          '{{ nginx__test_cache ~ "etc/nginx/fastcgi_params" }}'
+        nginx_cfg_mime_types:
+          '{{ nginx__test_cache ~ "etc/nginx/mime.types" }}'
+        nginx_cfg_nginx_conf:
+          '{{ nginx__test_cache ~ "etc/nginx/nginx.conf" }}'
+        nginx_cfg_scgi_params:
+          '{{ nginx__test_cache ~ "etc/nginx/scgi_params" }}'
+        nginx_cfg_uwsgi_params:
+          '{{ nginx__test_cache ~ "etc/nginx/uwsgi_params" }}'
+        nginx_cfg_web_d: '{{ nginx__test_cache ~ "usr/share/nginx/html" }}'

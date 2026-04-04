@@ -1,81 +1,111 @@
-# NGINX
+# [NGINX][h]
 NGINX installation from public release tarball.
 
-## Requirements
-[supported platforms](https://github.com/r-pufky/ansible_nginx/blob/main/meta/main.yml)
+## [Requirements][i]
+Requires [r_pufky.srv][g] galaxy-ng collection. See
+[additional documentation][m] and [reference documentation][h] for
+troubleshooting and config variables.
+
+Install size: ~4MB
 
 ## Role Variables
-[defaults](https://github.com/r-pufky/ansible_nginx/tree/main/defaults/main)
+Detailed variable use documented in defaults. See usage for role operation.
 
-### Ports
-All ports and protocols have been defined for the role.
+* [defaults][j] - User configurable options.
 
-[defaults/ports.yml](https://github.com/r-pufky/ansible_nginx/blob/main/defaults/main/ports.yml)
+* [ports][k] - Ports are **not** managed (defined for external use).
 
-## Dependencies
-**galaxy-ng** roles cannot be used independently. Part of
-[r_pufky.srv](https://github.com/r-pufky/ansible_collection_srv) collection.
+## Usage
+All [NGINX modules][o] are installed using the NGINX repository. CA
+certificates are always installed.
 
-## Example Playbook
-Read defaults documentation.
-[Additional documentation](http://r-pufky.github.io/docs/service/nginx).
+### WARNING
+> Debian service does NOT [automatically drop privileges][p] to managed user.
+>
+> Requires adding the following lines to nginx.conf:
+>
+>   ``` ini
+>   user <user> [group]
+>   ```
 
-Install NGINX using custom root certificates, configuration directory, and file
-from the ansible controller.
+Path                     | Usage
+-------------------------|-------
+/etc/nginx/conf.d        | nginx_cfg_conf_d always deployed here.
+/etc/nginx/secure.conf.d | nginx_cfg_secure_conf_d always deployed here.
+/usr/share/nginx         | nginx_cfg_web_d always deployed here.
+
+### Feature Flags
+Tasks are gated by feature flags and executed in the following order.
+
+  Step | Flag              | Notes
+ ------|-------------------|-------
+  1    | nginx_flg_install | Install required packages, users, etc.
+  2    | nginx_flg_config  | Install user-defined config.
+
+### Example Playbooks
+
+### New Deployment
 
 ``` yaml
-- name: 'nginx server'
-  hosts: 'nginx.example.com'
-  become: true
-  roles:
-     - 'r_pufky.srv.nginx'
-  vars:
-    nginx_cfg_ca_dir: 'host_vars/nginx.example.com/data/ca'
-    nginx_cfg_confd_dir: 'host_vars/nginx.example.com/data/conf.d'
-    nginx_cfg_nginx_conf_file: 'host_vars/nginx.example.com/data/nginx.conf'
+- name: 'Default NGINX server with default example pages.'
+  ansible.builtin.include_role:
+    name: 'r_pufky.srv.nginx'
 ```
 
-Install NGINX with auto-managed basic authentication.
+``` yaml
+- name: 'Default NGINX server with additional modules installed.'
+  ansible.builtin.include_role:
+    name: 'r_pufky.srv.nginx'
+  vars:
+    nginx_srv_packages:
+      - 'nginx-module-geoip'
+      - 'nginx-module-xslt'
+      - 'nginx-module-image-filter'
+      - 'nginx-module-njs'
+```
+
+### Static Deployments
+Most NGINX deployments will statically deploy configuration.
+
+NGINX configuration is complex and nuanced. See [reference documentation][h]
+keeping in mind where the [role places files](#usage).
 
 ``` yaml
-- name: 'nginx server'
-  hosts: 'nginx.example.com'
-  become: true
-  roles:
-     - 'r_pufky.srv.nginx'
+- name: 'NGINX custom site with tightened service defaults.'
+  ansible.builtin.inlcude_role:
+    name: 'r_pufky.srv.nginx'
   vars:
-    nginx_cfg_basic_auth_enable: true
-    nginx_cfg_basic_auth_users:
-      - user: 'test'
-        pass: 'test'
-      - user: 'test2'
-        state: 'absent'
+    nginx_flg_config: true
+    nginx_srv_packages:
+      - 'nginx-module-geoip'
+      - 'nginx-module-xslt'
+      - 'nginx-module-image-filter'
+      - 'nginx-module-njs'
+    nginx_srv_restart: true
+    nginx_srv_default: 'host_vars/nginx.example.com/nginx-secured'
+    nginx_srv_default_debug: 'host_vars/nginx.example.com/nginx-debug-secured'
+    nginx_cfg_conf_d: 'host_vars/nginx.example.com/conf.d'
+    # Certificates, htpasswd should be placed here and referenced.
+    nginx_cfg_secure_conf_d: 'host_vars/nginx.example.com/secure.conf.d'
+    nginx_cfg_nginx_conf: 'host_vars/nginx.example.com/nginx.conf'
+    nginx_cfg_web_d: 'host_vars/nginx.exmaple.com/webroot'
 ```
 
 ## Development
-Configure [environment](https://r-pufky.github.io/ansible_collection_docs/ansible/environment)
+Configure [environment][a].
 
-Run all unit tests:
 ``` bash
+# Run all tests.
 molecule test --all
 ```
 
-### Releases
-Release format: **{OS}-{SERVICE}-{ROLE}**
+### [Releases][b]
 
-Each type inherits the versioning system used; defaulting to schematic
-versioning.
-
-`12.0.0-2.0.3-1.0.0`
-
-* 12.0.0 - Debian 12 (bookworm).
-* 2.0.3 - Service/app version.
-* 1.0.0 - Role version.
-
-Releases are branched on Debian releases:
-
-* **[13.x.x](https://github.com/r-pufky/ansible_nginx)**: 13 Trixie.
-* **[12.x.x](https://github.com/r-pufky/ansible_nginx/tree/12.x)**: 12 Bookworm.
+  Release | Debian | Ansible | NGINX   | Notes
+ ---------|--------|---------|---------|-------
+  3.x.x   | 13     | 2.20    | v1.29.x | Ansible 2.20, feature flags, and semantic versioning.
+  2.x.x   | 12     | 2.18    | v1.28.x | Migrate to Debian Trixie.
+  1.x.x   | 12     | 2.12    | v1.26.x | Migrate from private repository
 
 ## Issues
 Create a bug and provide as much information as possible.
@@ -83,9 +113,24 @@ Create a bug and provide as much information as possible.
 Associate pull requests with a submitted bug.
 
 ## License
-[AGPL-3.0 License](https://www.tldrlegal.com/license/gnu-affero-general-public-license-v3-agpl-3-0)
- [(direct link)](https://github.com/r-pufky/ansible_nginx/blob/main/LICENSE)
+[AGPL-3.0 License][c] | [direct link][f]
 
 ## Author Information
-PGP Fingerprint: [466EEC2B67516C7117C85CE3A0BC35D16698BAB9](https://keys.openpgp.org/vks/v1/by-fingerprint/466EEC2B67516C7117C85CE3A0BC35D16698BAB9)
-| [github gist](https://gist.github.com/r-pufky/a8df36977c55b5bb20829267c4c49d22)
+PGP: [466EEC2B67516C7117C85CE3A0BC35D16698BAB9][d] | [github gist][e]
+
+
+[a]: https://r-pufky.github.io/ansible_docs
+[b]: https://semver.org/spec/v2.0.0
+[c]: https://www.tldrlegal.com/license/gnu-affero-general-public-license-v3-agpl-3-0
+[d]: https://keys.openpgp.org/vks/v1/by-fingerprint/466EEC2B67516C7117C85CE3A0BC35D16698BAB9
+[e]: https://gist.github.com/r-pufky/a8df36977c55b5bb20829267c4c49d22
+
+[f]: https://github.com/r-pufky/ansible_nginx/blob/main/LICENSE
+[g]: https://github.com/r-pufky/ansible_collection_srv
+[h]: https://nginx.org/en/docs/
+[i]: https://github.com/r-pufky/ansible_nginx/blob/main/meta/main.yml
+[j]: https://github.com/r-pufky/ansible_nginx/tree/main/defaults/main/main.yml
+[k]: https://github.com/r-pufky/ansible_nginx/blob/main/defaults/main/ports.yml
+[m]: http://r-pufky.github.io/docs/service/nginx
+[o]: https://nginx.org/en/linux_packages.html#Debian
+[p]: https://nginx.org/en/docs/ngx_core_module.html#user

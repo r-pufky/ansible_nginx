@@ -7,22 +7,273 @@
 # Reference:
 # * https://nginx.org/en/linux_packages.html#Debian
 
+- name: 'Install | filesystem | set systemd directories'
+  ansible.builtin.file:
+    path: '{{ item }}'
+    owner: 'root'
+    group: 'root'
+    mode: '0755'
+    state: 'directory'
+  loop:
+    - '{{ nginx___app._conf_d }}'
+    - '{{ nginx___app._web_d }}'
+
+- name: 'Install | filesystem | set service directories'
+  ansible.builtin.file:
+    path: '{{ nginx___app._secure_conf_d }}'
+    owner: 'root'
+    group: 'root'
+    mode: '0750'
+    state: 'directory'
+
 - name: 'Install | packages'
   ansible.builtin.include_role:
     name: 'r_pufky.deb.apt'
   vars:
     apt_packages:
-      - '{{ nginx_role_packages }}'
+      - '{{ nginx___packages }}'
       - '{{
-          _nginx_srv_packages.raw
-          if _nginx_srv_packages.raw | length > 0 else
-          []
+          nginx__srv._packages if nginx__srv._packages | length > 0 else []
         }}'
-      - '{{
-          nginx_role_basic_auth_packages
-          if _nginx_cfg_basic_auth_enable.raw else
-          []
+    apt_pins: '{{ nginx___apt_pins }}'
+    apt_sources: '{{ nginx___apt_nginx }}'
+    apt_srv_package_update_cache: true
+
+- name:
+    '{{ "Install | filesystem | set minimal " ~ nginx___app._default }}'
+  when: nginx__srv._default | length == 0
+  ansible.builtin.template:
+    src: 'templates/default/etc/default/nginx'
+    dest: '{{ nginx___app._default }}'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+
+- name:
+    '{{ "Install | filesystem | set minimal " ~ nginx___app._default_debug }}'
+  when: nginx__srv._default_debug | length == 0
+  ansible.builtin.template:
+    src: 'templates/default/etc/default/nginx-debug'
+    dest: '{{ nginx___app._default_debug }}'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+
+- name: '{{ "Install | filesystem | set minimal " ~ nginx___app._conf_d }}'
+  when: nginx__cfg._conf_d | length == 0
+  block:
+    - name: 'Install | filetree | set managed directories'
+      ansible.builtin.file:
+        path: '{{ nginx___app._conf_d ~ "/" ~ item.path }}'
+        owner: 'root'
+        group: 'root'
+        mode: '0755'
+        state: 'directory'
+      loop: '{{
+          query("community.general.filetree",
+                "templates/default/etc/nginx/conf.d")
         }}'
-    apt_pins: '{{ nginx_role_apt_pins }}'
-    apt_sources: '{{ nginx_role_apt_nginx }}'
-    apt_package_update_cache: true
+      loop_control:
+        label: '{{ item.path }}'
+      when: item.state == 'directory'
+
+    - name: 'Install | filetree | set managed files'
+      ansible.builtin.template:
+        src: '{{ item.src }}'
+        dest: '{{ nginx___app._conf_d ~ "/" ~ item.path }}'
+        owner: 'root'
+        group: 'root'
+        mode: '0644'
+      loop: '{{
+          query("community.general.filetree",
+                "templates/default/etc/nginx/conf.d")
+        }}'
+      loop_control:
+        label: '{{ item.path }}'
+      when: item.state == 'file'
+
+    - name: 'Install | filesystem | query remote files'
+      ansible.builtin.find:
+        paths: '{{ nginx___app._conf_d }}'
+        file_type: 'any'
+        hidden: true
+        recurse: true
+      register: nginx__remote
+
+    - name: 'Install | filetree | remove unmanaged files and directories'
+      ansible.builtin.file:
+        path: '{{ item.path }}'
+        state: 'absent'
+      loop: '{{ nginx__remote.files | sort(attribute="path", reverse=true) }}'
+      loop_control:
+        label: '{{ item.path }}'
+      when: >
+        item.path not in
+        (
+          query("community.general.filetree",
+                "templates/default/etc/nginx/conf.d") |
+          map(attribute='path') |
+          map('regex_replace', '^', nginx___app._conf_d ~ "/") | list
+        )
+
+- name:
+    '{{  "Install | filesystem | set minimal " ~ nginx___app._secure_conf_d }}'
+  when: nginx__cfg._secure_conf_d | length == 0
+  block:
+    - name: 'Install | filetree | set managed directories'
+      ansible.builtin.file:
+        path: '{{ nginx___app._secure_conf_d ~ "/" ~ item.path }}'
+        owner: 'root'
+        group: 'root'
+        mode: '0750'
+        state: 'directory'
+      loop: '{{
+          query("community.general.filetree",
+                "templates/default/etc/nginx/secure.conf.d")
+        }}'
+      loop_control:
+        label: '{{ item.path }}'
+      when: item.state == 'directory'
+
+    - name: 'Install | filetree | set managed files'
+      ansible.builtin.template:
+        src: '{{ item.src }}'
+        dest: '{{ nginx___app._secure_conf_d ~ "/" ~ item.path }}'
+        owner: 'root'
+        group: 'root'
+        mode: '0640'
+      loop: '{{
+          query("community.general.filetree",
+                "templates/default/etc/nginx/secure.conf.d")
+        }}'
+      loop_control:
+        label: '{{ item.path }}'
+      when: item.state == 'file'
+
+    - name: 'Install | filesystem | query remote files'
+      ansible.builtin.find:
+        paths: '{{ nginx___app._secure_conf_d }}'
+        file_type: 'any'
+        hidden: true
+        recurse: true
+      register: nginx__remote
+
+    - name: 'Install | filetree | remove unmanaged files and directories'
+      ansible.builtin.file:
+        path: '{{ item.path }}'
+        state: 'absent'
+      loop: '{{ nginx__remote.files | sort(attribute="path", reverse=true) }}'
+      loop_control:
+        label: '{{ item.path }}'
+      when: >
+        item.path not in
+        (
+          query("community.general.filetree", nginx__cfg._secure_conf_d) |
+          map(attribute='path') |
+          map('regex_replace', '^', nginx___app._secure_conf_d ~ "/") | list
+        )
+
+- name:
+    '{{ "Install | filesystem | set minimal " ~ nginx___app._fastcgi_params }}'
+  when: nginx__cfg._fastcgi_params | length == 0
+  ansible.builtin.template:
+    src: 'templates/default/etc/nginx/fastcgi_params'
+    dest: '{{ nginx___app._fastcgi_params }}'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+
+- name: '{{ "Install | filesystem | set minimal " ~ nginx___app._mime_types }}'
+  when: nginx__cfg._mime_types | length == 0
+  ansible.builtin.template:
+    src: 'templates/default/etc/nginx/mime.types'
+    dest: '{{ nginx___app._mime_types }}'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+
+- name: '{{ "Install | filesystem | set minimal " ~ nginx___app._nginx_conf }}'
+  when: nginx__cfg._nginx_conf  | length == 0
+  ansible.builtin.template:
+    src: 'templates/default/etc/nginx/nginx.conf'
+    dest: '{{ nginx___app._nginx_conf }}'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+
+- name:
+    '{{ "Install | filesystem | set minimal " ~ nginx___app._scgi_params }}'
+  when: nginx__cfg._scgi_params | length == 0
+  ansible.builtin.template:
+    src: 'templates/default/etc/nginx/scgi_params'
+    dest: '{{ nginx___app._scgi_params }}'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+
+- name:
+    '{{ "Install | filesystem | set minimal " ~ nginx___app._uwsgi_params }}'
+  when: nginx__cfg._uwsgi_params | length == 0
+  ansible.builtin.template:
+    src: 'templates/default/etc/nginx/uwsgi_params'
+    dest: '{{ nginx___app._uwsgi_params }}'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+
+- name: '{{ "Install | filesystem | set minimal " ~ nginx___app._web_d }}'
+  when: nginx__cfg._web_d | length == 0
+  block:
+    - name: 'Install | filetree | set managed directories'
+      ansible.builtin.file:
+        path: '{{ nginx___app._web_d ~ "/" ~ item.path }}'
+        owner: 'root'
+        group: 'root'
+        mode: '0755'
+        state: 'directory'
+      loop: '{{
+          query("community.general.filetree",
+                "templates/default/usr/share/nginx/html")
+        }}'
+      loop_control:
+        label: '{{ item.path }}'
+      when: item.state == 'directory'
+
+    - name: 'Install | filetree | set managed files'
+      ansible.builtin.template:
+        src: '{{ item.src }}'
+        dest: '{{ nginx___app._web_d ~ "/" ~ item.path }}'
+        owner: 'root'
+        group: 'root'
+        mode: '0644'
+      loop: '{{
+          query("community.general.filetree",
+                "templates/default/usr/share/nginx/html")
+        }}'
+      loop_control:
+        label: '{{ item.path }}'
+      when: item.state == 'file'
+
+    - name: 'Install | filesystem | query remote files'
+      ansible.builtin.find:
+        paths: '{{ nginx___app._web_d }}'
+        file_type: 'any'
+        hidden: true
+        recurse: true
+      register: nginx__remote
+
+    - name: 'Install | filetree | remove unmanaged files and directories'
+      ansible.builtin.file:
+        path: '{{ item.path }}'
+        state: 'absent'
+      loop: '{{ nginx__remote.files | sort(attribute="path", reverse=true) }}'
+      loop_control:
+        label: '{{ item.path }}'
+      when: >
+        item.path not in
+        (
+          query("community.general.filetree",
+                "templates/default/usr/share/nginx/html") |
+          map(attribute='path') |
+          map('regex_replace', '^', nginx___app._web_d ~ "/") | list
+        )
