@@ -19,14 +19,13 @@ Detailed variable use documented in defaults. See usage for role operation.
 All [NGINX modules][o] are installed using the NGINX repository. CA
 certificates are always installed.
 
-### WARNING
 > Debian service does NOT [automatically drop privileges][p] to managed user.
->
-> Requires adding the following lines to nginx.conf:
->
->   ``` ini
->   user <user> [group]
->   ```
+
+nginx.conf
+``` ini
+# Add the following line to drop privileges.
+user <user> [group]
+```
 
 Path                     | Usage
 -------------------------|-------
