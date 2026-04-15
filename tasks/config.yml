@@ -73,6 +73,21 @@
           map('regex_replace', '^', nginx___app._conf_d ~ "/") | list
         )
 
+- name: '{{ "Config | filesystem | query " ~ nginx___app._conf_d }}'
+  when: nginx__cfg._conf_d | length == 0
+  ansible.builtin.find:
+    paths: "{{ nginx___app._conf_d }}"
+    recurse: false  # Don't need to enumerate sub-directories to remove.
+    hidden: true
+  register: nginx__cmd
+
+- name: '{{ "Config | filesystem | clear " ~ nginx___app._conf_d }}'
+  when: nginx__cfg._conf_d | length == 0
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ nginx__cmd.files }}"
+
 - name: '{{ "Config | filesystem | set " ~ nginx___app._secure_conf_d }}'
   when: nginx__cfg._secure_conf_d | length > 0
   block:
@@ -124,6 +139,21 @@
           map(attribute='path') |
           map('regex_replace', '^', nginx___app._secure_conf_d ~ "/") | list
         )
+
+- name: '{{ "Config | filesystem | query " ~ nginx___app._secure_conf_d }}'
+  when: nginx__cfg._secure_conf_d | length == 0
+  ansible.builtin.find:
+    paths: "{{ nginx___app._secure_conf_d }}"
+    recurse: false  # Don't need to enumerate sub-directories to remove.
+    hidden: true
+  register: nginx__cmd
+
+- name: '{{ "Config | filesystem | clear " ~ nginx___app._secure_conf_d }}'
+  when: nginx__cfg._secure_conf_d | length == 0
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ nginx__cmd.files }}"
 
 - name: '{{ "Config | filesystem | set " ~ nginx___app._fastcgi_params }}'
   when: nginx__cfg._fastcgi_params | length > 0
@@ -221,3 +251,18 @@
           map(attribute='path') |
           map('regex_replace', '^', nginx___app._web_d ~ "/") | list
         )
+
+- name: '{{ "Config | filesystem | query " ~ nginx___app._web_d }}'
+  when: nginx__cfg._web_d | length == 0
+  ansible.builtin.find:
+    paths: "{{ nginx___app._web_d }}"
+    recurse: false  # Don't need to enumerate sub-directories to remove.
+    hidden: true
+  register: nginx__cmd
+
+- name: '{{ "Config | filesystem | clear " ~ nginx___app._web_d }}'
+  when: nginx__cfg._web_d | length == 0
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ nginx__cmd.files }}"
